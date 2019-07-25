@@ -45,8 +45,8 @@ end
 
 function neighbourhood(bmu::Int,s::Int,smax::Int,nodes::Array{Float64,1},w::Float64)
 
-    decay = αexp(s,1e-5)
-    shrink = αexp(s,5e-5)
+    decay = αexp(s,1e-3)
+    shrink = αexp(s,5e-3)
     # decay = αlin(s,smax)
     # shrink = αlin(s,smax)
 
@@ -82,36 +82,37 @@ function average_rounding_error(data::Array{Float64,1},nodes::Array{Float64,1})
     return S
 end
 
-data = vcat(randn(50000),randn(50000).+4.0)
+data = vcat(randn(500),randn(500).+4.0)
 
-Nnodes = 32767
+Nnodes = 31
 nodes = maxentropy(Nnodes,data)
+#nodes = collect(range(0,stop=1,length=Nnodes))
 
-w = std(data)*length(nodes)/length(data)/40
+w = std(data)*length(nodes)/length(data)/30
 
-smax = 10000
-er = average_rounding_error(data,nodes)
-ser = @sprintf("%.8f",er)
-println("\nStart: $ser")
+# smax = 600
+# er = average_rounding_error(data,nodes)
+# ser = @sprintf("%.8f",er)
+# println("\nStart: $ser")
 # global ermin = er
-
-for s in 1:smax
-    update!(s,smax,data,nodes,w)
-    # er = average_rounding_error(data,nodes)
-    #
-    # global ermin
-    # if er < ermin
-    #     ermin = er
-    # end
-    #
-    # ser = @sprintf("%.6f",er)
-    print("\r\u1b[K")
-    progress = Int(round(s/smax*100))
-    print("$progress%")
-end
-er = average_rounding_error(data,nodes)
-ser = @sprintf("%.8f",er)
-println(", End: $ser")
+#
+# for s in 1:smax
+#     update!(s,smax,data,nodes,w)
+#     er = average_rounding_error(data,nodes)
+#
+#     global ermin
+#     if er < ermin
+#         ermin = er
+#     end
+#
+#     ser = @sprintf("%.6f",er)
+#     print("\r\u1b[K")
+#     progress = Int(round(s/smax*100))
+#     print("$progress%, $ser")
+# end
+# er = average_rounding_error(data,nodes)
+# ser = @sprintf("%.8f",er)
+# println(", End: $ser")
 
 ##
 
@@ -123,12 +124,20 @@ ylim(-1,2)
 title("s = 0", loc="left")
 tight_layout()
 
-# smax = 300
-# for s in 1:smax
-#     update!(s,smax,data,nodes,w)
-#     er = average_rounding_error(data,nodes)
-#     ser = @sprintf("%.4f",er)
-#     title("s = $s, r = $ser", loc="left")
-#     l1.set_data(nodes,zeros(length(nodes)))
-#     pause(αexp(s,0.5)+0.05)
-# end
+er = average_rounding_error(data,nodes)
+ser = @sprintf("%.8f",er)
+println("\nStart: $ser")
+
+smax = 200
+for s in 1:smax
+    update!(s,smax,data,nodes,w)
+    er = average_rounding_error(data,nodes)
+    ser = @sprintf("%.4f",er)
+    title("s = $s, r = $ser", loc="left")
+    l1.set_data(nodes,zeros(length(nodes)))
+    #pause(αexp(s,0.5)+0.05)
+    savefig(@sprintf "frames/frame%04d.jpg" s)
+    print("\r\u1b[K")
+    progress = Int(round(s/smax*100))
+    print("$progress%, $ser")
+end
