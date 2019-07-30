@@ -1,18 +1,25 @@
-function update!(s::Int,smax::Int,data::Array{Float64,1},nodes::Array{Float64,1},w::Float64=1.0)
+function update!(s::Int,smax::Int,data::Array{Float64,1},nodes::Array{Float64,1},w::Float64,t::Float64,r::Float64)
     x = rand(data)
     dist = distance(nodes,x)
     bmu = bestMatchingUnit(dist)
-    θ = neighbourhood(bmu,s,smax,nodes,w)
+    θ = neighbourhood(bmu,s,smax,nodes,w,t,r)
     for i in 1:length(nodes)
         nodes[i] += θ[i]*dist[i]
     end
 end
 
-function average_rounding_error(data::Array{Float64,1},nodes::Array{Float64,1})
-    n = length(data)
-    S = 0.0
-    for i = 1:n
-        S += minimum(abs.(distance(nodes,data[i])))/n
+function SOM(n::Int,smax::Int,data::Array{Float64,1};
+            w::Float64=0.1,     # width scale of the Gaussian neighbourhood
+            t::Float64=0.001,    # decay rate
+            r::Float64=0.001)    # shrink rate
+
+    nodes = maxentropy(n,data)
+
+    w = maxspread(data)/length(nodes)*w
+
+    for s in 1:smax
+        update!(s,smax,data,nodes,w,t,r)
     end
-    return S
+
+    return nodes
 end
