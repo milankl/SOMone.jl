@@ -1,4 +1,4 @@
-using PyPlot, Statistics, Printf, Random
+using PyPlot, Statistics, Printf, Random, Clustering
 
 """ Preconditioner based on maximum entropy method. """
 function maxentropy(r::Int,data::Array{Float64,1})
@@ -46,12 +46,16 @@ end
 function neighbourhood(bmu::Int,s::Int,smax::Int,nodes::Array{Float64,1},w::Float64)
 
     decay = αexp(s,1e-3)
-    shrink = αexp(s,5e-3)
+    shrink = αexp(s,5e-2)
     # decay = αlin(s,smax)
     # shrink = αlin(s,smax)
 
     # Gaussian neighbourhood function
-    d = decay*exp.(-(((nodes .- nodes[bmu])/(w*shrink)).^2)./2)
+    #d = decay*exp.(-(((nodes .- nodes[bmu])/(w*shrink)).^2)./2)
+
+    # step function
+    d = decay*crenel.(nodes .- nodes[bmu],w*shrink)
+
     return d
 end
 
@@ -69,7 +73,7 @@ function update!(s::Int,smax::Int,data::Array{Float64,1},nodes::Array{Float64,1}
     bmu = bestMatchingUnit(dist)
     θ = neighbourhood(bmu,s,smax,nodes,w)
     for i in 1:length(nodes)
-        nodes[i] += θ[i]*dist[i]
+        nodes[i] += θ[i]*sign(dist[i])
     end
 end
 
@@ -84,11 +88,11 @@ end
 
 data = vcat(randn(500),randn(500).+4.0)
 
-Nnodes = 31
-nodes = maxentropy(Nnodes,data)
-#nodes = collect(range(0,stop=1,length=Nnodes))
+Nnodes = 32
+nodesmaxent = maxentropy(Nnodes,data)
+nodes = collect(range(0,stop=1,length=Nnodes))
 
-w = std(data)*length(nodes)/length(data)/30
+w = maxspread(data)/length(nodes)
 
 # smax = 600
 # er = average_rounding_error(data,nodes)
@@ -115,28 +119,37 @@ w = std(data)*length(nodes)/length(data)/30
 # println(", End: $ser")
 
 ##
+R = kmeans(vcat(data',data'),Nnodes)
+M = R.centers
 
+nodes = sort(M[1,:])
+
+##
+s=0
 fig,ax = subplots(1,1,figsize=(8,2))
 ax.plot(data,ones(length(data)),"|",lw=0.1)
 l1, = ax.plot(nodes,zeros(length(nodes)),".-")
+l2, = ax.plot(nodesmaxent,zeros(length(nodes)) .- 0.5,".-")
 yticks([])
 ylim(-1,2)
 title("s = 0", loc="left")
 tight_layout()
 
-er = average_rounding_error(data,nodes)
+er = average_rounding_error(data,nodesmaxent)
 ser = @sprintf("%.8f",er)
 println("\nStart: $ser")
+title("s = $s, r = $ser", loc="left")
 
-smax = 200
+##
+smax = 600
 for s in 1:smax
     update!(s,smax,data,nodes,w)
     er = average_rounding_error(data,nodes)
     ser = @sprintf("%.4f",er)
     title("s = $s, r = $ser", loc="left")
     l1.set_data(nodes,zeros(length(nodes)))
-    #pause(αexp(s,0.5)+0.05)
-    savefig(@sprintf "frames/frame%04d.jpg" s)
+    pause(αexp(s,0.5)+0.05)
+    #savefig(@sprintf "frames/frame%04d.jpg" s)
     print("\r\u1b[K")
     progress = Int(round(s/smax*100))
     print("$progress%, $ser")

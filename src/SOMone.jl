@@ -1,8 +1,8 @@
 module SOMone
 
-export SOM
+export SOM,maxentropy
 
-import Statistics, Printf, Random
+using Statistics, Printf, Random
 
 include("metrics.jl")
 include("neighbourhood.jl")
